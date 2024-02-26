@@ -1,0 +1,95 @@
+---
+title: "Data607-Lab5"
+output: html_document
+date: "2024-02-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+The chart above describes arrival delays for two airlines across five destinations. Your task is to:
+(1) Create a .CSV file (or optionally, a MySQL database!) that includes all of the information above.
+You’re encouraged to use a “wide” structure similar to how the information appears above, so
+that you can practice tidying and transformations as described below.
+(2) Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy
+and transform your data.
+(3) Perform analysis to compare the arrival delays for the two airlines.
+(4) Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative
+descriptions of your data cleanup work, analysis, and conclusions.
+
+**I will begin by creating a data frame which will include the information from the CSV file. We will use the link from the raw github code of the CSV file that we uploaded to our repository which includes all the information in the table. We will then load the libraries necessary to tidy this data which are tidyr and dplyr.** 
+
+```{r}
+
+flightscsv1 <- read.csv("https://raw.githubusercontent.com/Zcash95/DATA607-5/main/DATA607airlineschedule%20-%20Sheet1.csv")
+head(flightscsv1)
+
+library(tidyr)
+library(dplyr)
+```
+
+**We'll being by adding names to the columns that have none such as the first and second columns which indicate the airline and the status of the flight. We will add names to the airlines column to indicate which airline the delayed flights are from. We will then proceed by deleting any empty rows and as we can see the entire cells of row 3 are empty so we will just delete that row**
+
+```{r}
+flightscsv1 <- flightscsv1 %>%
+rename("Airline" = 1, "Status" = 2, "Los Angeles" = 3, "Phoenix" = 4, "San Diego" = 5, "San Francisco" = 6, "Seattle" = 7)
+
+print(flightscsv1)
+
+flightscsv1[2, "Airline"] <- "Alaska"
+flightscsv1[5, "Airline"] <- "AM West"
+
+flightscsv1 <- flightscsv1 %>%
+na.omit(flightscsv)
+
+head(flightscsv1)
+
+```
+
+**We will then attempt to tidy the data further by putting in a long format which is in rows. This will help us complete the analysis that we need to by putting the data in a longer format of rows instead of spread out by columns**
+
+
+
+```{r}
+flightscsv_long <- pivot_longer(flightscsv1, cols = -c(Airline, Status), names_to = "Destination", values_to = "Flights")
+print(flightscsv_long)
+
+```
+
+
+**We analyzed the data by creating new colums names On-time and delayed which counted the flights that were either on time or delayed. We then proceeded to add the total of delayed and on time flights and divided it by the number of delayed and this gave us a proportion indicating that Alaska airlines had more flights on time then AM West.**
+
+
+```{r}
+
+performance_data <- flightscsv_long %>%
+  group_by(Airline, Status) %>%
+  summarise(Count = n())
+
+
+performance_data <- performance_data %>%
+  mutate(
+  OnTimeCount = ifelse(Status == "On-time", Count, 0),
+  DelayedCount = ifelse(Status == "Delayed", Count, 0)) %>%
+  select(Airline, OnTimeCount, DelayedCount)
+
+
+performance_data <- performance_data %>%
+  group_by(Airline) %>%
+  summarise( OnTime = sum(OnTimeCount),Delayed = sum(DelayedCount))
+
+performance_data <- performance_data %>%
+  mutate(OnTimePercentage = (OnTime / (OnTime + Delayed)) * 100, 
+  DelayedPercentage = (Delayed / (OnTime + Delayed)) * 100)
+
+print(performance_data)
+
+
+
+```
+
+**The conclusion that we got after analyzing our data is that Alaska airlines had more flights on time then AM West did.** 
+
